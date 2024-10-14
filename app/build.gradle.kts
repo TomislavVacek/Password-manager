@@ -72,4 +72,6 @@ dependencies {
     implementation(libs.androidx.biometric) // Biometrija (opcionalno)
     implementation(libs.androidx.material) // Compose Material
     implementation (libs.androidx.lifecycle.viewmodel.compose) //ViewModel Compose
+    implementation("androidx.security:security-crypto:1.1.0-alpha04")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
 }

@@ -25,6 +25,7 @@ fun PasswordManagerApp(viewModel: PasswordViewModel = viewModel()) {
     var website by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
+    var passwordLength by remember { mutableFloatStateOf(12f) }
 
     Scaffold(
         topBar = {
@@ -63,6 +64,27 @@ fun PasswordManagerApp(viewModel: PasswordViewModel = viewModel()) {
                 label = { Text("Password") },
                 modifier = Modifier.fillMaxWidth()
             )
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            // Dodaj Slider za odabir duljine lozinke
+            Text(text = "Password Length: ${passwordLength.toInt()}") // Prikazuje trenutnu duljinu
+            Slider(
+                value = passwordLength,
+                onValueChange = { passwordLength = it },
+                valueRange = 8f..20f, // Raspon duljine lozinke
+                steps = 12, // Dodaj korake (maksimalni broj koraka između 8 i 20)
+                modifier = Modifier.padding(16.dp)
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Dodaj gumb za generiranje lozinke
+            Button(onClick = {
+                password = PasswordGenerator.generatePassword(passwordLength.toInt()) // Generiraj lozinku na temelju duljine
+            }) {
+                Text("Generate Password")
+            }
 
             Spacer(modifier = Modifier.height(16.dp))
 
