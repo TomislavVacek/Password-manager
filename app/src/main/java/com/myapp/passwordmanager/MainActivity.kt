@@ -9,19 +9,28 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+
+        val passwordDataStore = PasswordDataStore(this)
+        val viewModelFactory = PasswordViewModelFactory(passwordDataStore)
+        val passwordViewModel: PasswordViewModel = ViewModelProvider(this, viewModelFactory).get(PasswordViewModel::class.java)
+
+
         setContent {
-            PasswordManagerApp()
+            PasswordManagerApp(passwordViewModel = passwordViewModel)
         }
     }
 }
 
 @Composable
-fun PasswordManagerApp(viewModel: PasswordViewModel = viewModel()) {
+fun PasswordManagerApp(
+    passwordViewModel: PasswordViewModel // Koristimo samo ovaj ViewModel koji dolazi izvana
+) {
     var website by remember { mutableStateOf("") }
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
@@ -88,8 +97,9 @@ fun PasswordManagerApp(viewModel: PasswordViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
+            // Dodaj lozinku u pohranu
             Button(onClick = {
-                viewModel.addPassword(website, username, password)
+                passwordViewModel.addPassword(website, username, password) // Koristi passwordViewModel za dodavanje lozinke
                 website = ""
                 username = ""
                 password = ""
@@ -99,7 +109,8 @@ fun PasswordManagerApp(viewModel: PasswordViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            viewModel.passwordList.forEach { passwordItem ->
+            // Prikaz liste lozinki iz passwordViewModel-a
+            passwordViewModel.passwordList.forEach { passwordItem ->
                 Text("Website: ${passwordItem.website}, Username: ${passwordItem.username}, Password: ${passwordItem.password}")
             }
         }

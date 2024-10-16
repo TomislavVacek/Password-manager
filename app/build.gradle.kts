@@ -59,6 +59,7 @@ dependencies {
     implementation(libs.androidx.ui.graphics)
     implementation(libs.androidx.ui.tooling.preview)
     implementation(libs.androidx.material3)
+    implementation(libs.androidx.datastore.preferences.core.jvm)
     //implementation(libs.androidx.security.crypto.ktx)
     testImplementation(libs.junit)
     androidTestImplementation(libs.androidx.junit)
@@ -74,4 +75,6 @@ dependencies {
     implementation (libs.androidx.lifecycle.viewmodel.compose) //ViewModel Compose
     implementation("androidx.security:security-crypto:1.1.0-alpha04")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
+    implementation ("com.google.code.gson:gson:2.8.9")
+
 }

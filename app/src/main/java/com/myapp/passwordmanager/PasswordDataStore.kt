@@ -2,35 +2,41 @@ package com.myapp.passwordmanager
 
 import android.content.Context
 import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
+import androidx.security.crypto.MasterKeys
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
 
-import kotlinx.serialization.encodeToString
-import kotlinx.serialization.json.Json
+
+
 
 class PasswordDataStore(context: Context) {
-    private val masterKey = MasterKey.Builder(context, "master_key")
-        .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-        .build()
 
-    private val sharedPrefs = EncryptedSharedPreferences.create(
-        context, // Prvo ide Context
-        "password_preferences", // Ime datoteke
-        masterKey, // MasterKey objekt
+    // Ključ za enkripciju
+    private val masterKeyAlias = MasterKeys.getOrCreate(MasterKeys.AES256_GCM_SPEC)
+
+    // Inicijalizacija EncryptedSharedPreferences
+    private val sharedPreferences = EncryptedSharedPreferences.create(
+        "passwords_datastore",
+        masterKeyAlias,
+        context,
         EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
         EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
     )
 
-    fun savePasswords(passwords: List<PasswordItem>) {
-        val jsonString = Json.encodeToString(passwords)
-        sharedPrefs.edit().putString("passwords", jsonString).apply()
+    // Gson za serijalizaciju/deserijalizaciju liste lozinki
+    private val gson = Gson()
+    private val passwordListKey = "password_list"
+
+    // Funkcija za spremanje lozinki
+    fun savePasswords(passwordList: List<PasswordItem>) {
+        val json = gson.toJson(passwordList)
+        sharedPreferences.edit().putString(passwordListKey, json).apply()
     }
 
+    // Funkcija za dohvaćanje spremljenih lozinki
     fun getPasswords(): List<PasswordItem> {
-        val jsonString = sharedPrefs.getString("passwords", null) ?: ""
-        return if (jsonString.isNotEmpty()) {
-            Json.decodeFromString(jsonString)
-        } else {
-            emptyList()
-        }
+        val json = sharedPreferences.getString(passwordListKey, null) ?: return emptyList()
+        val type = object : TypeToken<List<PasswordItem>>() {}.type
+        return gson.fromJson(json, type)
     }
 }
