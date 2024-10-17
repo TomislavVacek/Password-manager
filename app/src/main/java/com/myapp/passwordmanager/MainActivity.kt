@@ -1,6 +1,7 @@
 package com.myapp.passwordmanager
 
 import android.os.Bundle
+import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
@@ -17,17 +18,58 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 
-class MainActivity : ComponentActivity() {
+import androidx.fragment.app.FragmentActivity
+
+
+class MainActivity : FragmentActivity() {  // Promijenili smo ComponentActivity u FragmentActivity
+    private lateinit var biometricManager: BiometricManager
+    private lateinit var passwordViewModel: PasswordViewModel
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        biometricManager = BiometricManager(this)
+
         val passwordDataStore = PasswordDataStore(this)
         val viewModelFactory = PasswordViewModelFactory(passwordDataStore)
-        val passwordViewModel: PasswordViewModel = ViewModelProvider(this, viewModelFactory)[PasswordViewModel::class.java]
+        passwordViewModel = ViewModelProvider(this, viewModelFactory)[PasswordViewModel::class.java]
 
+        biometricManager.setupBiometricAuthentication(
+            onAuthenticationSuccess = {
+                runOnUiThread {
+                    setContent {
+                        PasswordManagerApp(passwordViewModel = passwordViewModel)
+                    }
+                }
+            },
+            onAuthenticationError = { _, errString ->  // Promijenili smo errorCode u _
+                runOnUiThread {
+                    Toast.makeText(this, "Authentication error: $errString", Toast.LENGTH_SHORT).show()
+                    finish()
+                }
+            }
+        )
 
         setContent {
-            PasswordManagerApp(passwordViewModel = passwordViewModel)
+            AuthenticationScreen(onAuthenticateClick = {
+                biometricManager.showBiometricPrompt()
+            })
+        }
+    }
+}
+
+@Composable
+fun AuthenticationScreen(onAuthenticateClick: () -> Unit) {
+    Column(
+        modifier = Modifier.fillMaxSize(),
+        verticalArrangement = Arrangement.Center,
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Button(
+            onClick = onAuthenticateClick,
+            modifier = Modifier.padding(16.dp)
+        ) {
+            Text("Authenticate to Access Passwords")
         }
     }
 }
@@ -41,11 +83,7 @@ fun PasswordManagerApp(
     var username by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var passwordLength by remember { mutableFloatStateOf(12f) }
-
-    // Držimo stanje pretrage
     var searchQuery by remember { mutableStateOf("") }
-
-    // Stanje za praćenje koja lozinka se uređuje
     var isEditing by remember { mutableStateOf(false) }
     var editingPasswordItem by remember { mutableStateOf<PasswordItem?>(null) }
 
@@ -62,7 +100,6 @@ fun PasswordManagerApp(
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Top
         ) {
-
             OutlinedTextField(
                 value = website,
                 onValueChange = { website = it },
@@ -90,31 +127,27 @@ fun PasswordManagerApp(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Dodaj Slider za odabir duljine lozinke
-            Text(text = "Password Length: ${passwordLength.toInt()}") // Prikazuje trenutnu duljinu
+            Text(text = "Password Length: ${passwordLength.toInt()}")
             Slider(
                 value = passwordLength,
                 onValueChange = { passwordLength = it },
-                valueRange = 8f..20f, // Raspon duljine lozinke
-                steps = 12, // Dodaj korake (maksimalni broj koraka između 8 i 20)
+                valueRange = 8f..20f,
+                steps = 12,
                 modifier = Modifier.padding(16.dp)
             )
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Gumb za generiranje lozinke
             Button(onClick = {
-                password = PasswordGenerator.generatePassword(passwordLength.toInt()) // Generiraj lozinku na temelju duljine
+                password = PasswordGenerator.generatePassword(passwordLength.toInt())
             }) {
                 Text("Generate Password")
             }
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Dodaj ili ažuriraj lozinku u pohranu
             Button(onClick = {
                 if (isEditing && editingPasswordItem != null) {
-                    // Ako uređujemo, ažuriramo postojeću lozinku
                     passwordViewModel.updatePassword(
                         PasswordItem(
                             id = editingPasswordItem!!.id,
@@ -126,7 +159,6 @@ fun PasswordManagerApp(
                     isEditing = false
                     editingPasswordItem = null
                 } else {
-                    // Ako ne uređujemo, dodajemo novu lozinku
                     passwordViewModel.addPassword(website, username, password)
                 }
                 website = ""
@@ -138,13 +170,11 @@ fun PasswordManagerApp(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Search bar i lista unesenih lozinki prebaceni na dno aplikacije
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .weight(1f) // Ostatak prostora koristi za listu i pretragu
+                    .weight(1f)
             ) {
-                // Polje za pretragu lozinki
                 OutlinedTextField(
                     value = searchQuery,
                     onValueChange = { searchQuery = it },
@@ -154,17 +184,15 @@ fun PasswordManagerApp(
 
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Prikazujemo samo lozinke koje odgovaraju upitu pretrage
                 val filteredPasswords = viewModel.passwordList.filter {
                     it.website.contains(searchQuery, ignoreCase = true) ||
                             it.username.contains(searchQuery, ignoreCase = true)
                 }
 
-                // LazyColumn za skrolanje liste lozinki
                 LazyColumn(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight() // Omogućuje više prostora za prikaz lozinki
+                        .fillMaxHeight()
                 ) {
                     items(filteredPasswords) { passwordItem ->
                         Row(
@@ -180,9 +208,7 @@ fun PasswordManagerApp(
                             }
 
                             Row {
-                                // Gumb za uređivanje
                                 IconButton(onClick = {
-                                    // Postavimo stanje za uređivanje
                                     website = passwordItem.website
                                     username = passwordItem.username
                                     password = passwordItem.password
@@ -192,7 +218,6 @@ fun PasswordManagerApp(
                                     Icon(Icons.Default.Edit, contentDescription = "Edit")
                                 }
 
-                                // Gumb za brisanje
                                 IconButton(onClick = {
                                     viewModel.deletePassword(passwordItem)
                                 }) {

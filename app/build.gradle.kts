@@ -76,5 +76,6 @@ dependencies {
     implementation("androidx.security:security-crypto:1.1.0-alpha04")
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation ("com.google.code.gson:gson:2.8.9")
+    implementation ("androidx.biometric:biometric:1.1.0")
 
 }
