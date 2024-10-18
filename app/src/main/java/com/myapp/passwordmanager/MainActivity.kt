@@ -197,6 +197,10 @@ fun NewPasswordScreen(
         modifier = Modifier.fillMaxWidth()
     )
 
+    // Dodaj prikaz snage lozinke
+    val passwordStrength = viewModel.checkPasswordStrength(currentPassword)
+    Text(text = "Password Strength: $passwordStrength")
+
     Spacer(modifier = Modifier.height(16.dp))
 
     Text(text = "Password Length: ${currentPasswordLength.toInt()}")
@@ -236,6 +240,7 @@ fun NewPasswordScreen(
         Text(if (isEditing) "Update Password" else "Add Password")
     }
 }
+
 
 @Composable
 fun PasswordListScreen(
