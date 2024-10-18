@@ -16,8 +16,16 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
         loadPasswords()  // Učitavanje spremljenih lozinki pri inicijalizaciji ViewModel-a
     }
 
+    // Provjera ponovnog korištenja lozinke za različite web stranice
+    fun isPasswordReused(password: String, website: String): Boolean {
+        return passwordList.any { it.password == password && it.website != website }
+    }
+
     // Dodaj novu lozinku
-    fun addPassword(website: String, username: String, password: String) {
+    fun addPassword(website: String, username: String, password: String): Boolean {
+        val passwordReused = isPasswordReused(password, website)
+
+        // Dodaj lozinku bez obzira na to je li ponovo korištena
         val newPassword = PasswordItem(
             id = (passwordList.maxOfOrNull { it.id } ?: 0) + 1,
             website = website,
@@ -25,7 +33,10 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
             password = password
         )
         passwordList = passwordList + newPassword
-        savePasswords()  // Spremanje nakon dodavanja
+        savePasswords()
+
+        // Vraćamo true ako je lozinka već korištena
+        return passwordReused
     }
 
     // Ažuriraj postojeću lozinku
@@ -60,11 +71,6 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
         }
     }
 
-    // Provjera ponovnog korištenja lozinke
-    fun isPasswordReused(newPassword: String): Boolean {
-        return passwordList.any { it.password == newPassword }
-    }
-
     // Provjera snage lozinke
     fun checkPasswordStrength(password: String): String {
         var strengthScore = 0
@@ -83,3 +89,4 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
         }
     }
 }
+
