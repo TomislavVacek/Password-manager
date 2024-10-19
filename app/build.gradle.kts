@@ -80,5 +80,7 @@ dependencies {
     // ZXing biblioteka za generiranje QR kodova
     implementation("com.google.zxing:core:3.4.1")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")  // Koristi se za Android podršku za QR kodove
+    implementation (libs.androidx.material.v150)
+    implementation (libs.androidx.material.icons.extended)
 
 }

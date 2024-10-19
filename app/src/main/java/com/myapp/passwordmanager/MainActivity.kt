@@ -3,6 +3,7 @@ package com.myapp.passwordmanager
 import android.graphics.Bitmap
 import android.os.Bundle
 import android.widget.Toast
+import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
@@ -10,22 +11,23 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.List
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.List
+import androidx.compose.material.icons.filled.SaveAlt // Ikona za Backup
+import androidx.compose.material.icons.filled.Restore // Ikona za Restore
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.ViewModelProvider
 import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myapp.passwordmanager.QRCodeUtils.generateQRCode
+import androidx.compose.material.icons.filled.SaveAlt // Ikona za Backup
+import androidx.compose.material.icons.filled.Restore // Ikona za Restore
+import androidx.compose.ui.platform.LocalContext
 
-// Dodajte ove uvoze da rešite probleme
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 
 class MainActivity : FragmentActivity() {
     private lateinit var biometricManager: BiometricManager
@@ -80,7 +82,6 @@ fun AuthenticationScreen(onAuthenticateClick: () -> Unit) {
     }
 }
 
-
 @Composable
 fun PasswordManagerApp(
     passwordViewModel: PasswordViewModel
@@ -99,11 +100,53 @@ fun PasswordManagerApp(
 
     var selectedScreen by remember { mutableIntStateOf(0) }
     val scaffoldState = rememberScaffoldState()
+    val context = LocalContext.current // Koristi LocalContext.current unutar @Composable
+
+    // Stanja za backup i restore
+    var performBackup by remember { mutableStateOf(false) }
+    var performRestore by remember { mutableStateOf(false) }
+
+    // Ako je potrebno izvršiti backup, pokreni efekt
+    if (performBackup) {
+        LaunchedEffect(performBackup) {
+            passwordViewModel.backupPasswords(context)
+            snackbarMessage = "Backup completed successfully!"
+            showSnackbar = true
+            performBackup = false
+        }
+    }
+
+    // Ako je potrebno izvršiti restore, pokreni efekt
+    if (performRestore) {
+        LaunchedEffect(performRestore) {
+            passwordViewModel.restorePasswords(context)
+            snackbarMessage = "Passwords restored successfully!"
+            showSnackbar = true
+            performRestore = false
+        }
+    }
 
     Scaffold(
         scaffoldState = scaffoldState,
         topBar = {
-            TopAppBar(title = { Text("Password Manager") })
+            TopAppBar(
+                title = { Text("Password Manager") },
+                actions = {
+                    // Dodaj Backup ikonu
+                    IconButton(onClick = {
+                        performBackup = true // Pokreni backup
+                    }) {
+                        Icon(Icons.Default.SaveAlt, contentDescription = "Backup Passwords")
+                    }
+
+                    // Dodaj Restore ikonu
+                    IconButton(onClick = {
+                        performRestore = true // Pokreni restore
+                    }) {
+                        Icon(Icons.Default.Restore, contentDescription = "Restore Passwords")
+                    }
+                }
+            )
         },
         bottomBar = {
             BottomNavigation {
@@ -202,3 +245,5 @@ fun PasswordManagerApp(
         }
     }
 }
+
+
