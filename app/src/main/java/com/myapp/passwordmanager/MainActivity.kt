@@ -1,9 +1,10 @@
 package com.myapp.passwordmanager
 
+import android.graphics.Bitmap
 import android.os.Bundle
 import android.widget.Toast
-import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -16,12 +17,17 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.fragment.app.FragmentActivity
+import com.myapp.passwordmanager.QRCodeUtils.generateQRCode
 
-class MainActivity : FragmentActivity() {  // Promijenili smo ComponentActivity u FragmentActivity
+// Dodajte ove uvoze da rešite probleme
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+
+class MainActivity : FragmentActivity() {
     private lateinit var biometricManager: BiometricManager
     private lateinit var passwordViewModel: PasswordViewModel
 
@@ -38,7 +44,7 @@ class MainActivity : FragmentActivity() {  // Promijenili smo ComponentActivity 
             onAuthenticationSuccess = {
                 runOnUiThread {
                     setContent {
-                        PasswordManagerApp(passwordViewModel = passwordViewModel) // Ovdje pozivamo PasswordManagerApp
+                        PasswordManagerApp(passwordViewModel = passwordViewModel)
                     }
                 }
             },
@@ -74,6 +80,7 @@ fun AuthenticationScreen(onAuthenticateClick: () -> Unit) {
     }
 }
 
+
 @Composable
 fun PasswordManagerApp(
     passwordViewModel: PasswordViewModel
@@ -85,10 +92,16 @@ fun PasswordManagerApp(
     var searchQuery by remember { mutableStateOf("") }
     var isEditing by remember { mutableStateOf(false) }
     var editingPasswordItem by remember { mutableStateOf<PasswordItem?>(null) }
+    var showSnackbar by remember { mutableStateOf(false) } // Za prikaz Snackbar-a
+    var snackbarMessage by remember { mutableStateOf("") } // Poruka za Snackbar
+    var showQRCode by remember { mutableStateOf(false) } // Stanje za QR kod
+    var qrCodeBitmap by remember { mutableStateOf<Bitmap?>(null) } // Za pohranu QR koda
 
     var selectedScreen by remember { mutableIntStateOf(0) }
+    val scaffoldState = rememberScaffoldState()
 
     Scaffold(
+        scaffoldState = scaffoldState,
         topBar = {
             TopAppBar(title = { Text("Password Manager") })
         },
@@ -133,6 +146,10 @@ fun PasswordManagerApp(
                             password = ""
                             isEditing = false
                             editingPasswordItem = null
+
+                            // Pokaži obavijest o uspešnom dodavanju
+                            snackbarMessage = if (isEditing) "Password successfully updated!" else "Password successfully added!"
+                            showSnackbar = true
                         }
                     )
                 }
@@ -148,79 +165,40 @@ fun PasswordManagerApp(
                             isEditing = true
                             editingPasswordItem = passwordItem
                             selectedScreen = 0 // Prebaci se na ekran za uređivanje
+                        },
+                        onGenerateQRCode = { passwordToShare ->
+                            qrCodeBitmap = QRCodeUtils.generateQRCode(passwordToShare) // Generiraj QR kod
+                            showQRCode = true // Prikaži QR kod
                         }
                     )
                 }
             }
         }
-    }
-}
 
-
-
-
-
-@Composable
-fun PasswordListScreen(
-    viewModel: PasswordViewModel,
-    searchQuery: String,
-    onSearchQueryChange: (String) -> Unit,
-    onEditPassword: (PasswordItem) -> Unit
-) {
-    Column {
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = { onSearchQueryChange(it) },
-            label = { Text("Search") },
-            modifier = Modifier.fillMaxWidth()
-        )
-
-        Spacer(modifier = Modifier.height(8.dp))
-
-        val filteredPasswords = viewModel.passwordList.filter {
-            it.website.contains(searchQuery, ignoreCase = true) ||
-                    it.username.contains(searchQuery, ignoreCase = true)
-        }
-
-        LazyColumn(
-            modifier = Modifier
-                .fillMaxWidth()
-                .fillMaxHeight()
-        ) {
-            items(filteredPasswords) { passwordItem ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Column {
-                        Text("Website: ${passwordItem.website}")
-                        Text("Username: ${passwordItem.username}")
-                        Text("Password: ${passwordItem.password}")
+        // Prikaz QR koda
+        if (showQRCode && qrCodeBitmap != null) {
+            AlertDialog(
+                onDismissRequest = { showQRCode = false },
+                title = { Text("QR Code") },
+                text = {
+                    qrCodeBitmap?.let {
+                        Image(bitmap = it.asImageBitmap(), contentDescription = "QR Code")
                     }
-
-                    Row {
-                        IconButton(onClick = {
-                            onEditPassword(passwordItem)
-                        }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Edit")
-                        }
-
-                        IconButton(onClick = {
-                            viewModel.deletePassword(passwordItem)
-                        }) {
-                            Icon(Icons.Default.Delete, contentDescription = "Delete")
-                        }
+                },
+                confirmButton = {
+                    Button(onClick = { showQRCode = false }) {
+                        Text("Close")
                     }
                 }
+            )
+        }
+
+        // Prikaz Snackbar-a za obaveštenja
+        if (showSnackbar) {
+            LaunchedEffect(scaffoldState.snackbarHostState) {
+                scaffoldState.snackbarHostState.showSnackbar(snackbarMessage)
+                showSnackbar = false
             }
         }
     }
 }
-
-
-
-
-
-

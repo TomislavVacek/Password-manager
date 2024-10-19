@@ -77,5 +77,8 @@ dependencies {
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.5.1")
     implementation ("com.google.code.gson:gson:2.8.9")
     implementation ("androidx.biometric:biometric:1.1.0")
+    // ZXing biblioteka za generiranje QR kodova
+    implementation("com.google.zxing:core:3.4.1")
+    implementation("com.journeyapps:zxing-android-embedded:4.3.0")  // Koristi se za Android podršku za QR kodove
 
 }

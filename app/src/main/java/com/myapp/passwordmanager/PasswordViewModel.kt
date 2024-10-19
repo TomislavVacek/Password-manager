@@ -6,6 +6,12 @@ import androidx.compose.runtime.setValue
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import android.content.Context
+import android.os.Environment
+import java.io.BufferedReader
+import java.io.File
+import java.io.FileReader
+import java.io.FileWriter
 
 class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : ViewModel() {
 
@@ -88,5 +94,42 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
             else -> "Weak"
         }
     }
+
+    fun backupPasswords(context: Context) {
+        val backupFile = File(context.getExternalFilesDir(null), "password_backup.txt")
+        val fileWriter = FileWriter(backupFile)
+
+        passwordList.forEach { passwordItem ->
+            fileWriter.write("${passwordItem.website},${passwordItem.username},${passwordItem.password}\n")
+        }
+        fileWriter.close()
+    }
+
+    fun restorePasswords(context: Context) {
+        val backupFile = File(context.getExternalFilesDir(null), "password_backup.txt")
+        if (backupFile.exists()) {
+            val fileReader = FileReader(backupFile)
+            val bufferedReader = BufferedReader(fileReader)
+
+            val restoredPasswords = mutableListOf<PasswordItem>()
+            bufferedReader.forEachLine { line ->
+                val parts = line.split(",")
+                if (parts.size == 3) {
+                    restoredPasswords.add(
+                        PasswordItem(
+                            id = (passwordList.maxOfOrNull { it.id } ?: 0) + 1,
+                            website = parts[0],
+                            username = parts[1],
+                            password = parts[2]
+                        )
+                    )
+                }
+            }
+            passwordList = restoredPasswords
+            savePasswords()
+            bufferedReader.close()
+        }
+    }
+
 }
 
