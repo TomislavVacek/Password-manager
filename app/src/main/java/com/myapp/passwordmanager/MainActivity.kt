@@ -28,7 +28,6 @@ import androidx.compose.material.icons.filled.SaveAlt // Ikona za Backup
 import androidx.compose.material.icons.filled.Restore // Ikona za Restore
 import androidx.compose.ui.platform.LocalContext
 
-
 class MainActivity : FragmentActivity() {
     private lateinit var biometricManager: BiometricManager
     private lateinit var passwordViewModel: PasswordViewModel
@@ -209,8 +208,8 @@ fun PasswordManagerApp(
                             editingPasswordItem = passwordItem
                             selectedScreen = 0 // Prebaci se na ekran za uređivanje
                         },
-                        onGenerateQRCode = { passwordToShare ->
-                            qrCodeBitmap = QRCodeUtils.generateQRCode(passwordToShare) // Generiraj QR kod
+                        onGenerateQRCode = { encryptedQRCodeData ->
+                            qrCodeBitmap = QRCodeUtils.generateQRCode(encryptedQRCodeData) // Generiraj QR kod
                             showQRCode = true // Prikaži QR kod
                         }
                     )
@@ -245,5 +244,3 @@ fun PasswordManagerApp(
         }
     }
 }
-
-
