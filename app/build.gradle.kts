@@ -82,5 +82,8 @@ dependencies {
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")  // Koristi se za Android podršku za QR kodove
     implementation (libs.androidx.material.v150)
     implementation (libs.androidx.material.icons.extended)
+    implementation ("com.squareup.okhttp3:okhttp:4.9.1")
+    implementation ("commons-codec:commons-codec:1.15") // Za SHA-1 hashiranje
+
 
 }

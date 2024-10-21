@@ -4,20 +4,27 @@ import android.content.Context
 import androidx.compose.runtime.mutableStateOf
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.launch
+import okhttp3.OkHttpClient
+import okhttp3.Request
 import java.io.BufferedReader
 import java.io.File
 import java.io.FileReader
 import java.io.FileWriter
+import java.security.MessageDigest
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.setValue
-
-
+import java.util.Locale
+import android.util.Log
 
 class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : ViewModel() {
 
     var passwordList by mutableStateOf(listOf<PasswordItem>())
         private set
+
+    private val client = OkHttpClient()
 
     init {
         loadPasswords()  // Učitavanje spremljenih lozinki pri inicijalizaciji ViewModel-a
@@ -96,6 +103,49 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
         }
     }
 
+    // Funkcija za hashiranje lozinke u SHA-1
+    private fun hashPassword(password: String): String {
+        val digest = MessageDigest.getInstance("SHA-1")
+        val hashBytes = digest.digest(password.toByteArray(Charsets.UTF_8))
+        return hashBytes.joinToString("") { "%02x".format(it) }
+    }
+
+    // Funkcija za provjeru da li je lozinka procurila
+    suspend fun isPasswordPwned(password: String): Boolean = withContext(Dispatchers.IO) {
+        val hashedPassword = hashPassword(password).uppercase(Locale.ROOT)
+
+        // Prvih 5 znakova hash-a
+        val prefix = hashedPassword.substring(0, 5)
+        // Ostatak hash-a
+        val suffix = hashedPassword.substring(5)
+
+        // URL za API (k-Anonimnost način)
+        val url = "https://api.pwnedpasswords.com/range/$prefix"
+
+        try {
+            // Slanje HTTP GET zahtjeva
+            val request = Request.Builder().url(url).build()
+            val response = client.newCall(request).execute()
+
+            if (response.isSuccessful) {
+                val responseBody = response.body?.string()
+
+                // Tražimo da li se ostatak hash-a pojavljuje u odgovoru
+                responseBody?.lines()?.forEach { line ->
+                    val parts = line.split(":")
+                    if (parts[0].equals(suffix, ignoreCase = true)) {
+                        val occurrences = parts[1].toIntOrNull() ?: 0
+                        Log.d("PasswordViewModel", "Password found in Pwned DB with $occurrences occurrences")
+                        return@withContext occurrences > 0 // Ako lozinka postoji u bazi podataka
+                    }
+                }
+            }
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+        false // Lozinka nije pronađena
+    }
+
     // Backup lozinki u datoteku
     fun backupPasswords(context: Context) {
         val backupFile = File(context.getExternalFilesDir(null), "password_backup.txt")
@@ -135,7 +185,4 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
             bufferedReader.close()
         }
     }
-
 }
-
-
