@@ -110,14 +110,22 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
         return hashBytes.joinToString("") { "%02x".format(it) }
     }
 
+
     // Funkcija za provjeru da li je lozinka procurila
     suspend fun isPasswordPwned(password: String): Boolean = withContext(Dispatchers.IO) {
         val hashedPassword = hashPassword(password).uppercase(Locale.ROOT)
+
+        // Logiranje hashirane lozinke i njenih dijelova
+        Log.d("PasswordViewModel", "Checking password: $password")
+        Log.d("PasswordViewModel", "Hashed password: $hashedPassword")
 
         // Prvih 5 znakova hash-a
         val prefix = hashedPassword.substring(0, 5)
         // Ostatak hash-a
         val suffix = hashedPassword.substring(5)
+
+        // Logiraj prefix i suffix
+        Log.d("PasswordViewModel", "Prefix: $prefix, Suffix: $suffix")
 
         // URL za API (k-Anonimnost način)
         val url = "https://api.pwnedpasswords.com/range/$prefix"
@@ -129,6 +137,9 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
 
             if (response.isSuccessful) {
                 val responseBody = response.body?.string()
+
+                // Logiraj API odgovor
+                Log.d("PasswordViewModel", "API Response: ${responseBody ?: "No response"}")
 
                 // Tražimo da li se ostatak hash-a pojavljuje u odgovoru
                 responseBody?.lines()?.forEach { line ->
@@ -142,9 +153,13 @@ class PasswordViewModel(private val passwordDataStore: PasswordDataStore) : View
             }
         } catch (e: Exception) {
             e.printStackTrace()
+            Log.e("PasswordViewModel", "Error while checking password: ${e.message}")
         }
         false // Lozinka nije pronađena
     }
+
+
+
 
     // Backup lozinki u datoteku
     fun backupPasswords(context: Context) {

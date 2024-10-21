@@ -22,25 +22,36 @@ fun NewPasswordScreen(
     var currentWebsite by remember { mutableStateOf(website) }
     var currentUsername by remember { mutableStateOf(username) }
     var currentPassword by remember { mutableStateOf(password) }
-    var currentPasswordLength by remember { mutableFloatStateOf(passwordLength) }
+    val currentPasswordLength by remember { mutableFloatStateOf(passwordLength) }
+
+    // Stanje za prikaz snage lozinke
+    val passwordStrength = viewModel.checkPasswordStrength(currentPassword)
 
     // Stanje za prikaz Snackbar-a
+    var showSnackbar by remember { mutableStateOf(false) }
+    var snackbarMessage by remember { mutableStateOf("") }
     val scaffoldState = rememberScaffoldState()
     val coroutineScope = rememberCoroutineScope()
+
+    // LaunchedEffect za prikazivanje Snackbar-a
+    LaunchedEffect(showSnackbar) {
+        if (showSnackbar) {
+            scaffoldState.snackbarHostState.showSnackbar(snackbarMessage)
+            showSnackbar = false
+        }
+    }
 
     Scaffold(
         scaffoldState = scaffoldState,
         modifier = Modifier.fillMaxSize(),
         snackbarHost = {
             SnackbarHost(it) { data ->
-                Snackbar(
-                    action = {
-                        TextButton(onClick = { data.dismiss() }) {
-                            Text("OK")
-                        }
+                Snackbar(action = {
+                    TextButton(onClick = { data.dismiss() }) {
+                        Text("OK")
                     }
-                ) {
-                    Text(data.message)
+                }) {
+                    Text(snackbarMessage)
                 }
             }
         }
@@ -51,7 +62,7 @@ fun NewPasswordScreen(
                 .padding(16.dp)
                 .fillMaxSize(),
             horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.spacedBy(8.dp) // Smanjen razmak između elemenata
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             // Polja za unos
             OutlinedTextField(
@@ -75,76 +86,50 @@ fun NewPasswordScreen(
                 modifier = Modifier.fillMaxWidth()
             )
 
-            // Provjera snage lozinke
-            val passwordStrength = viewModel.checkPasswordStrength(currentPassword)
+            // Prikaz snage lozinke
             Text(text = "Password Strength: $passwordStrength")
 
-            Text(text = "Password Length: ${currentPasswordLength.toInt()}")
-            Slider(
-                value = currentPasswordLength,
-                onValueChange = { currentPasswordLength = it },
-                valueRange = 8f..20f,
-                steps = 12,
-                modifier = Modifier.padding(horizontal = 16.dp)
-            )
-
-            // Gumb za generiranje lozinke
-            Button(
-                onClick = {
-                    currentPassword = PasswordGenerator.generatePassword(currentPasswordLength.toInt())
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+            // Ostali elementi, gumbi za dodavanje lozinke, generiranje lozinke itd.
+            Button(onClick = {
+                currentPassword = PasswordGenerator.generatePassword(currentPasswordLength.toInt())
+            }) {
                 Text("Generate Password")
             }
 
-            // Gumb za provjeru lozinke na Have I Been Pwned API
-            Button(
-                onClick = {
-                    coroutineScope.launch {
-                        val isPwned = viewModel.isPasswordPwned(currentPassword)
-                        val snackbarMessage = if (isPwned) {
-                            "Warning: This password has been compromised!"
-                        } else {
-                            "This password is safe."
-                        }
-                        scaffoldState.snackbarHostState.showSnackbar(snackbarMessage)
+            Button(onClick = {
+                coroutineScope.launch {
+                    val isPwned = viewModel.isPasswordPwned(currentPassword)
+                    snackbarMessage = if (isPwned) {
+                        "Warning: This password has been compromised!"
+                    } else {
+                        "This password is safe."
                     }
-                },
-                modifier = Modifier.fillMaxWidth()
-            ) {
+                    showSnackbar = true
+                }
+            }) {
                 Text("Check if Password is Pwned")
             }
 
             // Gumb za dodavanje lozinke
             Button(
                 onClick = {
-                    coroutineScope.launch {
-                        // Provjera korištene lozinke
-                        val isReused = viewModel.isPasswordReused(currentPassword, currentWebsite)
-                        if (isReused) {
-                            scaffoldState.snackbarHostState.showSnackbar("This password has already been used for another website!")
-                        }
-
-                        // Dodaj ili ažuriraj lozinku nakon upozorenja
-                        if (isEditing && editingPasswordItem != null) {
-                            viewModel.updatePassword(
-                                PasswordItem(
-                                    id = editingPasswordItem.id,
-                                    website = currentWebsite,
-                                    username = currentUsername,
-                                    password = currentPassword
-                                )
-                            )
-                        } else {
-                            viewModel.addPassword(currentWebsite, currentUsername, currentPassword)
-                        }
-
-                        // Prikaži poruku o uspješnom dodavanju samo jednom
-                        if (!isReused) {
-                            scaffoldState.snackbarHostState.showSnackbar("Password successfully added!")
-                        }
+                    if (viewModel.isPasswordReused(currentPassword, currentWebsite)) {
+                        snackbarMessage = "This password has already been used for another website!"
+                        showSnackbar = true
                     }
+                    if (isEditing && editingPasswordItem != null) {
+                        viewModel.updatePassword(
+                            PasswordItem(
+                                id = editingPasswordItem.id,
+                                website = currentWebsite,
+                                username = currentUsername,
+                                password = currentPassword
+                            )
+                        )
+                    } else {
+                        viewModel.addPassword(currentWebsite, currentUsername, currentPassword)
+                    }
+                    onPasswordAdded()
                 },
                 modifier = Modifier.fillMaxWidth()
             ) {
@@ -153,4 +138,6 @@ fun NewPasswordScreen(
         }
     }
 }
+
+
 
